@@ -34,6 +34,12 @@ If you prefer using the command line, you can build and flash the firmware using
    arduino-cli upload -p <PORT> --fqbn esp32:esp32:esp32s3:CDCOnBoot=cdc simppeliTCU
    ```
 
+## Compiling and Uploading with VS Code and PlatformIO
+Install VS Code extension PlatformIO IDE (platformio.platformio-ide)
+Within VS Code navigate to extension tab and under 'SimpeliTCU' hit Build.
+
+**Note:** Untested yet due to lack of hw board. Default setup expects: LilyGo T-2CAN
+
 ## Running Unit Tests
 
 ### Prerequisites
