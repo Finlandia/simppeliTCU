@@ -1,9 +1,26 @@
 #include "cliParser.h"
 #include <Arduino.h>
 #include "configuration.h"
+#include "version.h"
 
 static char inputBuffer[128];
 static int inputIndex = 0;
+
+// Parses a boolean CLI value ("true"/"1"/"false"/"0") and applies it via the given setter.
+// Prints an error and returns false if the value is not a valid boolean.
+static bool applyBoolParam(const char* val, ConfigStatus (*setter)(bool), ConfigStatus& status) {
+    bool b;
+    if (strcmp(val, "true") == 0 || strcmp(val, "1") == 0) {
+        b = true;
+    } else if (strcmp(val, "false") == 0 || strcmp(val, "0") == 0) {
+        b = false;
+    } else {
+        Serial.println("Error: Value must be 'true', 'false', '1', or '0'.");
+        return false;
+    }
+    status = setter(b);
+    return true;
+}
 
 void executeCommand(char* cmd) {
     char* command = strtok(cmd, " ");
@@ -14,6 +31,7 @@ void executeCommand(char* cmd) {
         bool showSecrets = (option != NULL && strcmp(option, "--secrets") == 0);
 
         Serial.println("Current Configuration:");
+        Serial.printf("  version: %s\n", FW_FULL_VERSION);
         Serial.printf("  ssid: %s\n", getWifiSSID());
         Serial.printf("  password: %s\n", showSecrets ? getWifiPassword() : "****");
         Serial.printf("  ap_ssid: %s\n", getApSSID());
@@ -27,6 +45,7 @@ void executeCommand(char* cmd) {
         Serial.printf("  locking_enabled: %s\n", getLockingEnabled() ? "true" : "false");
         Serial.printf("  mqtt_tls: %s\n", getMqttTls() ? "true" : "false");
         Serial.printf("  hass_discovery: %s\n", getHassDiscoveryEnabled() ? "true" : "false");
+        Serial.printf("  nag_dismiss: %s\n", getNagDismissEnabled() ? "true" : "false");
         if (!showSecrets) {
             Serial.println("  (use 'list --secrets' to display secret values)");
         }
@@ -34,7 +53,8 @@ void executeCommand(char* cmd) {
     else if (strcmp(command, "get") == 0) {
         char* key = strtok(NULL, " ");
         if (key != NULL) {
-            if (strcmp(key, "ssid") == 0) Serial.println(getWifiSSID());
+            if (strcmp(key, "version") == 0) Serial.println(FW_FULL_VERSION);
+            else if (strcmp(key, "ssid") == 0) Serial.println(getWifiSSID());
             else if (strcmp(key, "password") == 0) Serial.println("****");
             else if (strcmp(key, "ap_ssid") == 0) Serial.println(getApSSID());
             else if (strcmp(key, "ap_password") == 0) Serial.println("****");
@@ -47,6 +67,7 @@ void executeCommand(char* cmd) {
             else if (strcmp(key, "locking_enabled") == 0) Serial.println(getLockingEnabled() ? "true" : "false");
             else if (strcmp(key, "mqtt_tls") == 0) Serial.println(getMqttTls() ? "true" : "false");
             else if (strcmp(key, "hass_discovery") == 0) Serial.println(getHassDiscoveryEnabled() ? "true" : "false");
+            else if (strcmp(key, "nag_dismiss") == 0) Serial.println(getNagDismissEnabled() ? "true" : "false");
             else Serial.println("Unknown parameter.");
         } else {
             Serial.println("Usage: get <key>");
@@ -77,36 +98,10 @@ void executeCommand(char* cmd) {
             else if (strcmp(key, "mqtt_user") == 0) status = setMqttUser(val);
             else if (strcmp(key, "mqtt_password") == 0) status = setMqttPassword(val);
             else if (strcmp(key, "vehicle_id") == 0) status = setVehicleId(val);
-            else if (strcmp(key, "locking_enabled") == 0) {
-                if (strcmp(val, "true") == 0 || strcmp(val, "1") == 0) {
-                    status = setLockingEnabled(true);
-                } else if (strcmp(val, "false") == 0 || strcmp(val, "0") == 0) {
-                    status = setLockingEnabled(false);
-                } else {
-                    Serial.println("Error: Value must be 'true', 'false', '1', or '0'.");
-                    return;
-                }
-            }
-            else if (strcmp(key, "mqtt_tls") == 0) {
-                if (strcmp(val, "true") == 0 || strcmp(val, "1") == 0) {
-                    status = setMqttTls(true);
-                } else if (strcmp(val, "false") == 0 || strcmp(val, "0") == 0) {
-                    status = setMqttTls(false);
-                } else {
-                    Serial.println("Error: Value must be 'true', 'false', '1', or '0'.");
-                    return;
-                }
-            }
-            else if (strcmp(key, "hass_discovery") == 0) {
-                if (strcmp(val, "true") == 0 || strcmp(val, "1") == 0) {
-                    status = setHassDiscoveryEnabled(true);
-                } else if (strcmp(val, "false") == 0 || strcmp(val, "0") == 0) {
-                    status = setHassDiscoveryEnabled(false);
-                } else {
-                    Serial.println("Error: Value must be 'true', 'false', '1', or '0'.");
-                    return;
-                }
-            }
+            else if (strcmp(key, "locking_enabled") == 0) { if (!applyBoolParam(val, setLockingEnabled, status)) return; }
+            else if (strcmp(key, "mqtt_tls") == 0) { if (!applyBoolParam(val, setMqttTls, status)) return; }
+            else if (strcmp(key, "hass_discovery") == 0) { if (!applyBoolParam(val, setHassDiscoveryEnabled, status)) return; }
+            else if (strcmp(key, "nag_dismiss") == 0) { if (!applyBoolParam(val, setNagDismissEnabled, status)) return; }
             else {
                 Serial.println("Unknown parameter.");
                 return;
@@ -133,6 +128,9 @@ void executeCommand(char* cmd) {
             Serial.println("Usage: set <key> <value>");
         }
     } 
+    else if (strcmp(command, "version") == 0) {
+        Serial.println(FW_FULL_VERSION);
+    }
     else if (strcmp(command, "reboot") == 0) {
         Serial.println("Rebooting...");
         delay(100);
