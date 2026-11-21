@@ -1,0 +1,1 @@
+arduino-cli compile --fqbn esp32:esp32:esp32s3:CDCOnBoot=cdc   --build-property "compiler.cpp.extra_flags=-DGIT_HASH_RAW=$(git rev-parse --short HEAD)"  --output-dir ./build   simppeliTCU 
