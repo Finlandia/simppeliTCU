@@ -1,6 +1,9 @@
 // WiFi stub: the host is always "connected" because the PC already has a network.
 #pragma once
 
+#include <cstdint>
+#include <cstring>
+
 #include "IPAddress.h"
 #include "WiFiClient.h"
 
@@ -26,6 +29,12 @@ public:
     wl_status_t status() { return WL_CONNECTED; }
     IPAddress localIP() { return IPAddress(127, 0, 0, 1); }
     IPAddress softAPIP() { return IPAddress(127, 0, 0, 1); }
+    // Fixed, locally-administered fake MAC (matches ESP32 WiFi.macAddress(uint8_t*) signature).
+    uint8_t* macAddress(uint8_t* mac) {
+        static const uint8_t fake[6] = {0x02, 0x00, 0x00, 0x12, 0x34, 0x56};
+        memcpy(mac, fake, sizeof(fake));
+        return mac;
+    }
 };
 
 inline WiFiClass WiFi;
