@@ -3,6 +3,7 @@
 #include "stringBuffer.h"
 #include "version.h"
 #include <PubSubClient.h>
+#include <WiFi.h>
 
 // Define the global instance of the metric topics
 const OvmsMetrics ovmsMetrics;
@@ -12,12 +13,15 @@ const OvmsMetrics ovmsMetrics;
 // network) and device info. Closes the JSON object.
 static void appendCommonFields(StringBuffer<1024>& payload, const StringBuffer<128>& mqttPrefix) {
   const char* vid = getVehicleId();
-  StringBuffer<256> extra;
+  // Sized for the device block with a max-length (64 char) vehicle ID, which appears twice.
+  StringBuffer<384> extra;
   extra.format(",\"availability_topic\":\"%s%s\",\"payload_available\":\"yes\",\"payload_not_available\":\"no\"",
                mqttPrefix.c_str(), ovmsMetrics.connected);
   payload.append(extra.c_str());
 
-  extra.format(",\"device\":{\"identifiers\":[\"simppeliTCU_%s\"],\"name\":\"simppeliTCU %s\",\"manufacturer\":\"simppeliTCU\",\"model\":\"TCU\",\"sw_version\":\"%s\"}}", vid, vid, FW_FULL_VERSION);
+  // configuration_url adds a "Visit" link to the web UI on the HA device page.
+  extra.format(",\"device\":{\"identifiers\":[\"simppeliTCU_%s\"],\"name\":\"simppeliTCU %s\",\"manufacturer\":\"simppeliTCU\",\"model\":\"TCU\",\"sw_version\":\"%s\",\"configuration_url\":\"http://%s/\"}}",
+               vid, vid, FW_FULL_VERSION, WiFi.localIP().toString().c_str());
   payload.append(extra.c_str());
 }
 
