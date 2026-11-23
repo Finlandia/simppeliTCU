@@ -207,29 +207,29 @@ static const HassMqttProperty refreshProps[] = {
 // The Central Metric Registry
 static const HassMqttMetric hassMetrics[] = {
   // Sensors
-  {"sensor", "soc", socProps, sizeof(socProps)/sizeof(HassMqttProperty)},
-  {"sensor", "cabin_temp", tempProps, sizeof(tempProps)/sizeof(HassMqttProperty)},
-  {"sensor", "charge_state", chargeStateProps, sizeof(chargeStateProps)/sizeof(HassMqttProperty)},
-  {"sensor", "hvac_setpoint", hvacSetpointProps, sizeof(hvacSetpointProps)/sizeof(HassMqttProperty)},
-  {"sensor", "fan_speed", fanSpeedProps, sizeof(fanSpeedProps)/sizeof(HassMqttProperty)},
-  {"sensor", "ventilation_mode", ventilationModeProps, sizeof(ventilationModeProps)/sizeof(HassMqttProperty)},
+  {"sensor", "soc", socProps, sizeof(socProps)/sizeof(HassMqttProperty), false},
+  {"sensor", "cabin_temp", tempProps, sizeof(tempProps)/sizeof(HassMqttProperty), false},
+  {"sensor", "charge_state", chargeStateProps, sizeof(chargeStateProps)/sizeof(HassMqttProperty), false},
+  {"sensor", "hvac_setpoint", hvacSetpointProps, sizeof(hvacSetpointProps)/sizeof(HassMqttProperty), false},
+  {"sensor", "fan_speed", fanSpeedProps, sizeof(fanSpeedProps)/sizeof(HassMqttProperty), false},
+  {"sensor", "ventilation_mode", ventilationModeProps, sizeof(ventilationModeProps)/sizeof(HassMqttProperty), false},
   {"sensor", "latitude", latitudeProps, sizeof(latitudeProps)/sizeof(HassMqttProperty), true},
   {"sensor", "longitude", longitudeProps, sizeof(longitudeProps)/sizeof(HassMqttProperty), true},
 
   // Binary Sensors
-  {"binary_sensor", "charging", chargeProps, sizeof(chargeProps)/sizeof(HassMqttProperty)},
-  {"binary_sensor", "hvac", hvacProps, sizeof(hvacProps)/sizeof(HassMqttProperty)},
-  {"binary_sensor", "locked", lockProps, sizeof(lockProps)/sizeof(HassMqttProperty)},
-  {"binary_sensor", "heating", heatingProps, sizeof(heatingProps)/sizeof(HassMqttProperty)},
-  {"binary_sensor", "cooling", coolingProps, sizeof(coolingProps)/sizeof(HassMqttProperty)},
+  {"binary_sensor", "charging", chargeProps, sizeof(chargeProps)/sizeof(HassMqttProperty), false},
+  {"binary_sensor", "hvac", hvacProps, sizeof(hvacProps)/sizeof(HassMqttProperty), false},
+  {"binary_sensor", "locked", lockProps, sizeof(lockProps)/sizeof(HassMqttProperty), false},
+  {"binary_sensor", "heating", heatingProps, sizeof(heatingProps)/sizeof(HassMqttProperty), false},
+  {"binary_sensor", "cooling", coolingProps, sizeof(coolingProps)/sizeof(HassMqttProperty), false},
 
   // Switches
-  {"switch", "hvac_switch", hvacSwProps, sizeof(hvacSwProps)/sizeof(HassMqttProperty)},
-  {"switch", "lock_switch", lockSwProps, sizeof(lockSwProps)/sizeof(HassMqttProperty)},
+  {"switch", "hvac_switch", hvacSwProps, sizeof(hvacSwProps)/sizeof(HassMqttProperty), false},
+  {"switch", "lock_switch", lockSwProps, sizeof(lockSwProps)/sizeof(HassMqttProperty), false},
 
   // Buttons
-  {"button", "charge", chargeBtnProps, sizeof(chargeBtnProps)/sizeof(HassMqttProperty)},
-  {"button", "refresh", refreshProps, sizeof(refreshProps)/sizeof(HassMqttProperty)},
+  {"button", "charge", chargeBtnProps, sizeof(chargeBtnProps)/sizeof(HassMqttProperty), false},
+  {"button", "refresh", refreshProps, sizeof(refreshProps)/sizeof(HassMqttProperty), false},
 };
 
 // Door definitions

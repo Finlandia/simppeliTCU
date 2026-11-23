@@ -45,7 +45,10 @@ struct HassMqttMetric {
   const char* entityId;
   const HassMqttProperty* properties;
   size_t propertyCount;
-  bool requiresGpsTracking = false; // Skip this entity when location tracking is disabled
+  // Skip this entity when location tracking is disabled. No default member
+  // initializer here: that would make the struct a non-aggregate under C++11
+  // (ESP32 toolchain). Omitted members in aggregate init are zero-initialized.
+  bool requiresGpsTracking;
 };
 
 void mqttPublishHassDiscovery(PubSubClient& mqttClient, const StringBuffer<128>& mqttPrefix);
