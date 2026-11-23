@@ -9,9 +9,10 @@ cmake -S test -B test/build && cmake --build test/build && ctest --test-dir test
 
 ## What is covered
 
-One executable, `can_leaf_ze1_parsing_tests`, compiles **only** `simppeliTCU/canLeafZE1.cpp`
-against the stubs in `test_canInterface_stubs.cpp`. It has 15 tests and covers about 85% of the
-lines in that file. Covered areas:
+### `can_leaf_ze1_parsing_tests` — `canLeafZE1.cpp`
+
+Compiles `simppeliTCU/canLeafZE1.cpp` against the stubs in `test_canInterface_stubs.cpp`.
+15 tests, about 85% of the lines in that file. Covered areas:
 
 - Decoding of SOC (0x55B), cabin temperature (0x54F), car awake (0x601), charger (0x390),
   HVAC status (0x54B), HVAC setpoint (0x54A) and doors/locks (0x60D)
@@ -20,14 +21,43 @@ lines in that file. Covered areas:
 - Timing and sequence counter of the `DISMISS_NAG` send sequence
 - Reassembling the multi-frame AV-CAN GPS message (0x62C)
 
+### `can_interface_tests` / `can_interface_no_second_can_tests` — `canInterface.cpp`
+
+Compile the real `simppeliTCU/canInterface.cpp` against the fakes in [`fakes/`](fakes/). It is
+built twice: with `USE_SECOND_CAN=1` (LilyGO T-2Can default, 23 tests) and `USE_SECOND_CAN=0`
+(18 tests). Both variants reach 100% line coverage of the file. Covered areas:
+
+- `sendCAN`: frame contents (standard ID, DLC, data), TX timeout, `> ` / `! ` log prefix
+- Frame log format, timestamps relative to `resetCanLogTimestamps()` (including `millis()`
+  wraparound), dropping the log line when the Serial TX buffer is too full, DLC > 8 clamping
+- `readAndHandleCANMessage`: dispatch to `handleReceivedMessage`, non-blocking receive, at most
+  4 frames per call and bus, primary bus before second bus
+- `setupCAN`: 500 kbit/s, board pins from `hardware.h`, RX queue 32, accept-all filter, and the
+  success and failure messages
+- Second CAN: MCP2515 pins, mirroring sent frames, failure reporting, `2< ` receive log; or,
+  when disabled, that the second bus is never touched
+
+| Fake | Replaces | Test controls / inspects |
+| --- | --- | --- |
+| `fakes/Arduino.h`, `fake_arduino.cpp` | `millis()`, `Serial` | `fakeMillis`; `Serial.output`, `Serial.writeCapacity` |
+| `fakes/fake_can_drivers.*` | ESP-IDF TWAI driver | `fakeTwai`: install/start/transmit results, recorded configs and frames, `rxQueue` |
+| | MCP2515 (`secondCan.h`) | `fakeSecondCan`: setup/send results, recorded pins and frames, `rxQueue` |
+| | `handleReceivedMessage()` | `handledMessages` |
+
+The TWAI types come from `host/shims/driver/twai.h`, so tests and the host application share one
+definition. `fakes/` is first on the include path so `<Arduino.h>` resolves to the test fake
+rather than the host shim.
+
 ## Test isolation
 
-All tests use the `CanLeafZE1Parsing` fixture. Its `SetUp()` calls `resetCanLeafZE1State()`,
+All `canLeafZE1.cpp` tests use the `CanLeafZE1Parsing` fixture. Its `SetUp()` calls `resetCanLeafZE1State()`,
 which returns the internal state of `canLeafZE1.cpp` (nag-popup and reverse flags, AV sequence
 counter, GPS reassembly buffer, send-sequence state machine, HVAC setpoint) to power-on values,
-and `resetMocks()`, which clears the stub globals. Every test therefore starts from the same state.
+and `resetMocks()`, which clears the stub globals. The `CanInterface` fixture resets all fakes,
+sets `fakeMillis` to 0 and calls `resetCanLogTimestamps()`. Every test therefore starts from the
+same state.
 
-`ctest` runs the suite with `--gtest_shuffle`, so a test that leaks state into another fails
+`ctest` runs every suite with `--gtest_shuffle`, so a test that leaks state into another fails
 in a random order. A failing run prints its seed; reproduce it with:
 
 ```bash
@@ -40,17 +70,17 @@ When you add internal state to `canLeafZE1.cpp`, also reset it in `resetCanLeafZ
 
 ## Known shortcomings
 
-### 1. Most of the firmware is not tested at all
+### 1. Most of the firmware is still not tested
 
 These sources are not compiled into any test, so they get no tests and no coverage:
 
 | File | Untested responsibility |
 | --- | --- |
-| `canInterface.cpp` | Real `handle*` callbacks (state → MQTT publish), CAN logging, `sendCAN` |
 | `mqttInterface.cpp` | Topic building, command parsing, publish logic |
 | `hassDiscovery.cpp` | Home Assistant discovery payloads, availability topics |
 | `configuration.cpp` | Loading and saving preferences, defaults |
 | `cliParser.cpp` | Serial CLI command parsing |
+| `simppeliTCU.ino` | Real `handle*` callbacks (decoded value → MQTT publish), main loop |
 | `secondCan.cpp` | Second CAN bus forwarding |
 | `stringBuffer.h` | Bounded string helper (overflow and truncation behaviour) |
 
@@ -58,7 +88,8 @@ The `handle*` functions are replaced with stubs that only store the last value t
 The tests therefore check *decoding* but not what the firmware *does* with a decoded value.
 
 The Arduino/ESP32 shims in `host/shims/` already let all of these files build on Linux for the
-host application. They could be reused to bring these files under test.
+host application. The `canInterface.cpp` tests show the pattern for the rest: compile the real
+source against small fakes in `test/fakes/` that record calls and return configured results.
 
 ### 2. Gaps inside `canLeafZE1.cpp`
 
@@ -98,9 +129,18 @@ These paths never run (gcov, Debug build):
 ### 4. CI and reporting
 
 - The coverage report in CI (gcovr → Codecov) only contains files that the tests compile, which
-  is just `canLeafZE1.cpp`. The ~85% figure therefore looks much better than the real
-  coverage of the firmware, because the untested files are left out instead of counted as 0%.
+  is just `canLeafZE1.cpp` and `canInterface.cpp`. The reported figure therefore looks much
+  better than the real coverage of the firmware, because the untested files are left out
+  instead of counted as 0%.
 - CI has no minimum coverage threshold.
 - The host application ships with `host/sample-can.log`, but CI never replays it, so nothing
   tests the complete path from CAN frame to MQTT message.
 - `docs/compiling.md` only shows commands for MinGW on Windows.
+
+### 5. Issues found in `canInterface.cpp` while writing its tests
+
+- `sendCAN` copies `len` bytes into the 8-byte `twai_message_t::data` without clamping, so a
+  caller passing `len > 8` overflows the buffer. Current callers never do; this is not tested
+  because it is undefined behaviour.
+- `readAndHandleCANMessage` passes the raw TWAI `data_length_code` (which can exceed 8) to
+  `handleReceivedMessage`; only the log output is clamped.

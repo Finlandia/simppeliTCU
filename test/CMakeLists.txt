@@ -50,3 +50,31 @@ enable_testing()
 # Shuffle test order on every run to catch state leaking between tests.
 # A failing run prints its seed; reproduce with --gtest_shuffle --gtest_random_seed=<seed>.
 add_test(NAME can_leaf_ze1_parsing_tests COMMAND can_leaf_ze1_parsing_tests --gtest_shuffle)
+
+# --- canInterface.cpp ------------------------------------------------------------
+# The real canInterface.cpp is compiled against fakes in fakes/ (Arduino, TWAI driver,
+# MCP2515 second CAN, handleReceivedMessage). fakes/ comes before host/shims so that
+# <Arduino.h> resolves to the test fake; host/shims only supplies driver/twai.h (types).
+# Built twice so both USE_SECOND_CAN variants are tested.
+function(add_can_interface_test name use_second_can)
+    add_executable(${name}
+        test_canInterface.cpp
+        fakes/fake_arduino.cpp
+        fakes/fake_can_drivers.cpp
+        ../simppeliTCU/canInterface.cpp
+    )
+    target_include_directories(${name} PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/fakes
+        ${CMAKE_CURRENT_SOURCE_DIR}/../simppeliTCU
+        ${CMAKE_CURRENT_SOURCE_DIR}/../host/shims
+    )
+    target_compile_definitions(${name} PRIVATE
+        SIMPPELITCU_UNIT_TEST
+        USE_SECOND_CAN=${use_second_can}
+    )
+    target_link_libraries(${name} PRIVATE ${GTEST_MAIN_TARGET})
+    add_test(NAME ${name} COMMAND ${name} --gtest_shuffle)
+endfunction()
+
+add_can_interface_test(can_interface_tests 1)
+add_can_interface_test(can_interface_no_second_can_tests 0)
