@@ -61,6 +61,33 @@ jobs:
         flags: unittests
         name: unit-tests-coverage
 
+  build-host:
+    name: Build Host Application (Linux)
+    needs: unit-tests
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v7
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake g++ git
+
+    - name: Configure and build host application
+      working-directory: host
+      run: |
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+        cmake --build build -j
+
+    - name: Upload host binary
+      uses: actions/upload-artifact@v7
+      with:
+        # Deliberately not prefixed "simppeliTCU-" so the release job's firmware download pattern skips it.
+        name: host-linux-x64
+        path: host/build/simppeliTCU_host
+
   build-firmware:
     name: Build Firmware (${{ matrix.artifact }})
     needs: unit-tests
