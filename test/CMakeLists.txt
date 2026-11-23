@@ -168,6 +168,10 @@ add_host_test(second_can_tests
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/fakes/second_can
 )
 
+# ui.h defines sendMainPage() in the header, so it gets its own executable
+add_host_test(ui_tests SOURCES test_ui.cpp)
+set_property(SOURCE test_ui.cpp APPEND PROPERTY OBJECT_DEPENDS ${FW_DIR}/ui.h)
+
 # The sketch is compiled through host/sketch.cpp (adds the prototypes the Arduino IDE
 # would generate) and linked with all other firmware sources, like the host application.
 add_host_test(sketch_tests SOURCES

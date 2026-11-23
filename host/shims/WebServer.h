@@ -30,6 +30,13 @@ public:
     void sendContent(const String& content) { body_ += content.str(); }
     void sendContent(const char* content) { if (content) body_ += content; }
 
+#ifdef SIMPPELITCU_UNIT_TEST
+    // Unit-test builds only: the response built by the last handler call
+    int responseStatus() const { return status_; }
+    const std::string& responseContentType() const { return contentType_; }
+    const std::string& responseBody() const { return body_; }
+#endif
+
 private:
     void handleConnection(int fd);
     bool readRequest(int fd, std::string& method, std::string& target, std::string& body);

@@ -81,6 +81,7 @@ the `host_shims` library in `CMakeLists.txt`).
 | `mqtt_interface_tests` | `mqttInterface.cpp` | 57% | OVMS command dispatch, lock PIN ignored, foreign topics ignored, updates while disconnected |
 | `hass_discovery_tests` | `hassDiscovery.cpp` | 4% | Metric topic names; nothing is published without a broker connection |
 | `second_can_tests` | `secondCan.cpp` | 100% | Setup (pins, 500 kbit/s, failure), send clamps to 8 bytes, receive |
+| `ui_tests` | `ui.h` | 100% | Web page: placeholders, value formatting, charger/ventilation labels, location link, auto-refresh, HVAC details, setpoint default, lock buttons |
 | `sketch_tests` | `simppeliTCU.ino` | 15% | CAN callbacks store values, fan speed 0 ignored during HVAC, GPS only with tracking enabled |
 
 Line percentages are from the combined report of all suites.
@@ -95,6 +96,9 @@ Notes:
 - `sketch_tests` compiles the sketch through `host/sketch.cpp` and links all other firmware
   sources, like the host application. `setup()` and `loop()` are not called: they would start
   WiFi, the web server and MQTT.
+- `ui_tests` renders the page into the host shim's `WebServer` and reads the response back
+  through `responseStatus()`, `responseContentType()` and `responseBody()`. These accessors are
+  declared only when `SIMPPELITCU_UNIT_TEST` is defined, so the host application doesn't have them.
 - `cli_parser_tests` never runs `reboot` or `factory-reset`, because `ESP.restart()` re-executes
   the process in the host shim.
 
@@ -129,7 +133,6 @@ Every source now has a test executable, but the basic suites leave most behaviou
 | `hassDiscovery.cpp` | Discovery payloads are never checked: publishing needs a connected PubSubClient. A fake `Client` that completes the MQTT CONNECT handshake would allow capturing what is published. |
 | `mqttInterface.cpp` | `manageMQTT()`, reconnecting, the Last Will, and the topics and payloads actually published (same reason as above) |
 | `simppeliTCU.ino` | `setup()`, `loop()`, WiFi management, the web UI handlers (`handleRoot`, `handleHvacOn`, …), and starting sequences from MQTT commands |
-| `ui.h` | HTML page generation (0%) |
 | `cliParser.cpp` | `reboot` and `factory-reset` (they restart the process) |
 
 The tests check that `handle*` callbacks in the sketch store decoded values. They don't yet check
