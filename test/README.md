@@ -1,6 +1,6 @@
 # Unit tests
 
-Host-side GoogleTest suite for the firmware's CAN logic. Build and run instructions are in
+Host-side GoogleTest suites for the firmware. Build and run instructions are in
 [docs/compiling.md](../docs/compiling.md#running-unit-tests). On Linux:
 
 ```bash
@@ -65,6 +65,39 @@ The TWAI types come from `host/shims/driver/twai.h`, so tests and the host appli
 definition. `fakes/` is first on the include path so `<Arduino.h>` resolves to the test fake
 rather than the host shim.
 
+### Basic suites for the remaining sources
+
+Every other firmware source has its own test executable, so all of `simppeliTCU/` shows up in the
+coverage report. These tests are deliberately basic: a few smoke tests per file, meant as a
+starting point to extend. They are compiled against the host-application shims (`host/shims/`)
+and the real PubSubClient library, with the same flags as `host/CMakeLists.txt` (shared through
+the `host_shims` library in `CMakeLists.txt`).
+
+| Executable | Source under test | Lines | What the basic tests check |
+| --- | --- | --- | --- |
+| `string_buffer_tests` | `stringBuffer.h` | 75% | Truncation, format/append, trim, lower-case, compare helpers |
+| `configuration_tests` | `configuration.cpp` | 91% | Defaults, persistence across reload, length/hostname/AP-password validation, factory reset |
+| `cli_parser_tests` | `cliParser.cpp` | 86% | `get`, `set`, `list` (secrets hidden), errors, one line read from stdin |
+| `mqtt_interface_tests` | `mqttInterface.cpp` | 57% | OVMS command dispatch, lock PIN ignored, foreign topics ignored, updates while disconnected |
+| `hass_discovery_tests` | `hassDiscovery.cpp` | 4% | Metric topic names; nothing is published without a broker connection |
+| `second_can_tests` | `secondCan.cpp` | 100% | Setup (pins, 500 kbit/s, failure), send clamps to 8 bytes, receive |
+| `sketch_tests` | `simppeliTCU.ino` | 15% | CAN callbacks store values, fan speed 0 ignored during HVAC, GPS only with tracking enabled |
+
+Line percentages are from the combined report of all suites.
+
+Notes:
+
+- Tests that use configuration call `useFreshConfiguration()` from `host_test_helpers.h`. It
+  points the Preferences shim at an empty temporary file, so every test starts from the defaults
+  and no settings file is left behind.
+- `second_can_tests` is built with `USE_SECOND_CAN=1`. The MCP2515 library and SPI are faked in
+  `fakes/second_can/`.
+- `sketch_tests` compiles the sketch through `host/sketch.cpp` and links all other firmware
+  sources, like the host application. `setup()` and `loop()` are not called: they would start
+  WiFi, the web server and MQTT.
+- `cli_parser_tests` never runs `reboot` or `factory-reset`, because `ESP.restart()` re-executes
+  the process in the host shim.
+
 ## Test isolation
 
 All `canLeafZE1.cpp` tests use the `CanLeafZE1Parsing` fixture. Its `SetUp()` calls `resetCanLeafZE1State()`,
@@ -87,26 +120,20 @@ When you add internal state to `canLeafZE1.cpp`, also reset it in `resetCanLeafZ
 
 ## Known shortcomings
 
-### 1. Most of the firmware is still not tested
+### 1. Several sources have only smoke tests
 
-These sources are not compiled into any test, so they get no tests and no coverage:
+Every source now has a test executable, but the basic suites leave most behaviour untested:
 
-| File | Untested responsibility |
+| File | Main gaps |
 | --- | --- |
-| `mqttInterface.cpp` | Topic building, command parsing, publish logic |
-| `hassDiscovery.cpp` | Home Assistant discovery payloads, availability topics |
-| `configuration.cpp` | Loading and saving preferences, defaults |
-| `cliParser.cpp` | Serial CLI command parsing |
-| `simppeliTCU.ino` | Real `handle*` callbacks (decoded value → MQTT publish), main loop |
-| `secondCan.cpp` | Second CAN bus forwarding |
-| `stringBuffer.h` | Bounded string helper (overflow and truncation behaviour) |
+| `hassDiscovery.cpp` | Discovery payloads are never checked: publishing needs a connected PubSubClient. A fake `Client` that completes the MQTT CONNECT handshake would allow capturing what is published. |
+| `mqttInterface.cpp` | `manageMQTT()`, reconnecting, the Last Will, and the topics and payloads actually published (same reason as above) |
+| `simppeliTCU.ino` | `setup()`, `loop()`, WiFi management, the web UI handlers (`handleRoot`, `handleHvacOn`, …), and starting sequences from MQTT commands |
+| `ui.h` | HTML page generation (0%) |
+| `cliParser.cpp` | `reboot` and `factory-reset` (they restart the process) |
 
-The `handle*` functions are replaced with stubs that only store the last value they received.
-The tests therefore check *decoding* but not what the firmware *does* with a decoded value.
-
-The Arduino/ESP32 shims in `host/shims/` already let all of these files build on Linux for the
-host application. The `canInterface.cpp` tests show the pattern for the rest: compile the real
-source against small fakes in `test/fakes/` that record calls and return configured results.
+The tests check that `handle*` callbacks in the sketch store decoded values. They don't yet check
+what is published to MQTT.
 
 ### 2. Gaps inside `canLeafZE1.cpp`
 
@@ -145,11 +172,9 @@ These paths never run (gcov, Debug build):
 
 ### 4. CI and reporting
 
-- The coverage report in CI (gcovr → Codecov) only contains files that the tests compile, which
-  is just `canLeafZE1.cpp` and `canInterface.cpp`. The reported figure therefore looks much
-  better than the real coverage of the firmware, because the untested files are left out
-  instead of counted as 0%.
 - CI has no minimum coverage threshold.
+- The host-shim based suites build only on Unix (Linux, WSL, macOS), because the shims use
+  POSIX sockets and `poll`. On Windows/MinGW only the CAN suites are built.
 - The host application ships with `host/sample-can.log`, but CI never replays it, so nothing
   tests the complete path from CAN frame to MQTT message.
 - `docs/compiling.md` only shows commands for MinGW on Windows.
