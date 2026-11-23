@@ -78,3 +78,34 @@ endfunction()
 
 add_can_interface_test(can_interface_tests 1)
 add_can_interface_test(can_interface_no_second_can_tests 0)
+
+# --- Coverage report -------------------------------------------------------------
+# Configure with -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage -O0", run ctest,
+# then `cmake --build . --target coverage`. Produces:
+#   coverage/index.html  per-source-file HTML with line and branch highlighting
+#   coverage.xml         Cobertura report (Codecov)
+# Only firmware sources (simppeliTCU/) are reported; tests, fakes, host shims and
+# GoogleTest are left out. The filter is absolute: gcovr anchors relative filters to
+# the working directory, not to --root.
+find_program(GCOVR_EXECUTABLE gcovr)
+if(GCOVR_EXECUTABLE)
+    get_filename_component(REPO_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/.. ABSOLUTE)
+    set(COVERAGE_DIR ${CMAKE_CURRENT_BINARY_DIR}/coverage)
+    add_custom_target(coverage
+        COMMAND ${CMAKE_COMMAND} -E rm -rf ${COVERAGE_DIR}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${COVERAGE_DIR}
+        COMMAND ${GCOVR_EXECUTABLE}
+            --root ${REPO_ROOT}
+            --object-directory ${CMAKE_CURRENT_BINARY_DIR}
+            --filter ${REPO_ROOT}/simppeliTCU/
+            --html-details ${COVERAGE_DIR}/index.html
+            --html-title "simppeliTCU unit-test coverage"
+            --xml ${CMAKE_CURRENT_BINARY_DIR}/coverage.xml
+            --print-summary
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        COMMENT "Generating coverage report in ${COVERAGE_DIR}/index.html"
+        VERBATIM
+    )
+else()
+    message(STATUS "gcovr not found: 'coverage' target not available")
+endif()

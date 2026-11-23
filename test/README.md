@@ -7,6 +7,23 @@ Host-side GoogleTest suite for the firmware's CAN logic. Build and run instructi
 cmake -S test -B test/build && cmake --build test/build && ctest --test-dir test/build
 ```
 
+## Coverage report
+
+Requires `gcovr` (`apt install gcovr` or `pip install gcovr`):
+
+```bash
+cmake -S test -B test/build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage -O0"
+cmake --build test/build
+ctest --test-dir test/build
+cmake --build test/build --target coverage
+```
+
+Open `test/build/coverage/index.html`. It lists only firmware sources (`simppeliTCU/`), and each
+file links to a page showing its source with covered, partially covered and uncovered lines
+highlighted. CI uploads the same report as the `coverage-report` artifact. Coverage
+accumulates across runs, so delete `*.gcda` files in the build directory (or use a fresh build
+directory) before re-running `ctest` for a clean report.
+
 ## What is covered
 
 ### `can_leaf_ze1_parsing_tests` — `canLeafZE1.cpp`
