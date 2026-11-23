@@ -74,7 +74,7 @@ Once saved and connected, you should be able to see valid data on your dashboard
 
 simppeliTCU supports the Home Assistant MQTT discovery protocol.
 
-When the `hass_discovery` setting is enabled (which it is by default), the device will automatically publish configuration messages to your MQTT broker. If you have the MQTT integration configured in Home Assistant, a new device for your vehicle will appear automatically with all the available sensors (SOC, temperature, etc.) and controls (HVAC, charging, locking).
+When the `hass_discovery` setting is enabled (which it is by default), the device will automatically publish configuration messages to your MQTT broker. If you have the MQTT integration configured in Home Assistant, a new device for your vehicle will appear automatically with all the available sensors (SOC, temperature, etc.) and controls (HVAC, charging, locking). Board health diagnostics (WiFi signal, free heap, last reset reason, CAN bus state and error counters) are listed in the device's **Diagnostic** section, and the **Visit** link on the device page opens the simppeliTCU web UI.
 
 You can disable this feature by running `set hass_discovery false` via the serial console.
 
@@ -115,7 +115,16 @@ Where:
 | `ovms/<user>/<vehicle>/metric/v/p/latitude` | Yes | Current latitude in decimal degrees (e.g., `60.205212`). Only published when `tracking` is enabled (disabled by default) |
 | `ovms/<user>/<vehicle>/metric/v/p/longitude` | Yes | Current longitude in decimal degrees (e.g., `24.655841`). Only published when `tracking` is enabled (disabled by default) |
 | `ovms/<user>/<vehicle>/metric/s/v3/connected` | Yes | Connection status (LWT): `yes` or `no` |
+| `ovms/<user>/<vehicle>/metric/m/net/wifi/sq` | Yes | WiFi signal strength (RSSI) in dBm (e.g., `-67`). Diagnostic, see note below |
+| `ovms/<user>/<vehicle>/metric/m/freeram` | Yes | Free heap memory in bytes. Diagnostic |
+| `ovms/<user>/<vehicle>/metric/m/tcu/resetreason` | Yes | Reason for the last reset: `power_on`, `external_pin`, `software`, `panic`, `interrupt_watchdog`, `task_watchdog`, `other_watchdog`, `deep_sleep`, `brownout`, `sdio` or `unknown`. Diagnostic |
+| `ovms/<user>/<vehicle>/metric/m/tcu/canstate` | Yes | Primary CAN controller state: `running`, `stopped`, `bus_off`, `recovering` or `not_installed`. Diagnostic |
+| `ovms/<user>/<vehicle>/metric/m/tcu/can/txerrors` | Yes | Primary CAN transmit error counter (TEC, 0–255; 256 = bus-off). Rises on errors and falls on successful frames; non-zero values point at wiring, termination or bitrate problems. Diagnostic |
+| `ovms/<user>/<vehicle>/metric/m/tcu/can/rxerrors` | Yes | Primary CAN receive error counter (REC). Diagnostic |
+| `ovms/<user>/<vehicle>/metric/m/tcu/can/rxmissed` | Yes | Primary CAN frames dropped because the receive queue was full, cumulative since boot. Diagnostic |
 | `ovms/<user>/<vehicle>/client/<clientid>/response/<commandid>` | No | Response to specific commands. |
+
+> **Note:** Diagnostic metrics are published when the MQTT connection is established and then every 5 minutes, whether or not they changed. In Home Assistant they appear under **Diagnostic** on the device page and become unavailable if no update arrives for 15 minutes, which also serves as a heartbeat for the board.
 
 > **Note:** Location tracking (the `latitude`/`longitude` metrics above, the web UI location display, and the Home Assistant `latitude`/`longitude` discovery entities) is disabled by default and can be turned on with `set tracking true` in the serial CLI. When disabled, no location values are published and the location discovery entities are not announced.
 

@@ -129,3 +129,28 @@ void readAndHandleCANMessage() {
 void resetCanLogTimestamps() {
   logStartTime = millis();
 }
+
+const char* getCanBusState() {
+  twai_status_info_t status;
+  if (twai_get_status_info(&status) != ESP_OK) {
+    return "not_installed";
+  }
+  switch (status.state) {
+    case TWAI_STATE_RUNNING:    return "running";
+    case TWAI_STATE_STOPPED:    return "stopped";
+    case TWAI_STATE_BUS_OFF:    return "bus_off";
+    case TWAI_STATE_RECOVERING: return "recovering";
+    default:                    return "unknown";
+  }
+}
+
+bool getCanBusErrorCounters(CanBusErrorCounters& counters) {
+  twai_status_info_t status;
+  if (twai_get_status_info(&status) != ESP_OK) {
+    return false;
+  }
+  counters.txErrors = status.tx_error_counter;
+  counters.rxErrors = status.rx_error_counter;
+  counters.rxMissed = status.rx_missed_count;
+  return true;
+}

@@ -202,6 +202,42 @@ TEST_F(CanInterface, Setup_ReportsTwaiDriverFailures) {
     EXPECT_FALSE(outputContains("CAN driver started"));
 }
 
+// ---------------------------------------------------------------- getCanBusState
+
+TEST_F(CanInterface, BusState_MapsTwaiStates) {
+    fakeTwai.state = TWAI_STATE_RUNNING;
+    EXPECT_STREQ(getCanBusState(), "running");
+    fakeTwai.state = TWAI_STATE_STOPPED;
+    EXPECT_STREQ(getCanBusState(), "stopped");
+    fakeTwai.state = TWAI_STATE_BUS_OFF;
+    EXPECT_STREQ(getCanBusState(), "bus_off");
+    fakeTwai.state = TWAI_STATE_RECOVERING;
+    EXPECT_STREQ(getCanBusState(), "recovering");
+}
+
+TEST_F(CanInterface, BusState_ReportsDriverNotInstalled) {
+    fakeTwai.statusResult = ESP_ERR_INVALID_STATE;
+    EXPECT_STREQ(getCanBusState(), "not_installed");
+}
+
+TEST_F(CanInterface, ErrorCounters_ReadFromTwaiStatus) {
+    fakeTwai.txErrorCounter = 128;
+    fakeTwai.rxErrorCounter = 7;
+    fakeTwai.rxMissedCount = 42;
+
+    CanBusErrorCounters counters{};
+    ASSERT_TRUE(getCanBusErrorCounters(counters));
+    EXPECT_EQ(counters.txErrors, 128u);
+    EXPECT_EQ(counters.rxErrors, 7u);
+    EXPECT_EQ(counters.rxMissed, 42u);
+}
+
+TEST_F(CanInterface, ErrorCounters_UnavailableWhenDriverNotInstalled) {
+    fakeTwai.statusResult = ESP_ERR_INVALID_STATE;
+    CanBusErrorCounters counters{};
+    EXPECT_FALSE(getCanBusErrorCounters(counters));
+}
+
 #if USE_SECOND_CAN
 
 // ---------------------------------------------------------------- Second CAN enabled

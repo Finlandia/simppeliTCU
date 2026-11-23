@@ -73,4 +73,18 @@ void readAndHandleCANMessage();
 
 void resetCanLogTimestamps();
 
+// State of the primary (TWAI) CAN controller for diagnostics: "running", "stopped",
+// "bus_off", "recovering", or "not_installed" when the driver is not installed.
+const char* getCanBusState();
+
+// Error counters of the primary (TWAI) CAN controller, for diagnosing wiring problems.
+struct CanBusErrorCounters {
+  uint32_t txErrors;  // Transmit error counter (TEC): rises on TX errors, falls on success; bus-off at 256
+  uint32_t rxErrors;  // Receive error counter (REC): rises on RX errors, falls on success
+  uint32_t rxMissed;  // Frames lost because the RX queue was full, cumulative since boot
+};
+
+// Fills `counters` and returns true, or returns false if the driver is not installed.
+bool getCanBusErrorCounters(CanBusErrorCounters& counters);
+
 #endif

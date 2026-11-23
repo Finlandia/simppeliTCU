@@ -8,8 +8,19 @@
 #include "configuration.h"
 #include "host_test_helpers.h"
 #include "mqttInterface.h"
+#include "canInterface.h"
+
+#include <esp_system.h>
 
 void mqttCallback(char* topic, byte* payload, unsigned int length);  // not in mqttInterface.h
+const char* resetReasonToString(esp_reset_reason_t reason);          // not in mqttInterface.h
+
+// Normally provided by canInterface.cpp, which this suite does not link
+const char* getCanBusState() { return "running"; }
+bool getCanBusErrorCounters(CanBusErrorCounters& counters) {
+    counters = CanBusErrorCounters{};
+    return true;
+}
 
 // Command callbacks normally implemented in simppeliTCU.ino
 static int hvacOnCalls, hvacOffCalls, chargeOnCalls, refreshCalls, lockCalls, unlockCalls;
@@ -88,4 +99,20 @@ TEST_F(MqttInterface, UpdatesWhileDisconnectedDoNotCrash) {
     mqttUpdateGPS(60.17, 24.95);
     mqttPublishStatus("hello");
     SUCCEED();
+}
+
+TEST_F(MqttInterface, DiagnosticsWhileDisconnectedDoNotCrash) {
+    mqttPublishDiagnostics();
+    manageMQTT();  // no server configured: returns before the periodic diagnostics check
+    SUCCEED();
+}
+
+TEST_F(MqttInterface, ResetReasonNames) {
+    EXPECT_STREQ(resetReasonToString(ESP_RST_POWERON), "power_on");
+    EXPECT_STREQ(resetReasonToString(ESP_RST_SW), "software");
+    EXPECT_STREQ(resetReasonToString(ESP_RST_PANIC), "panic");
+    EXPECT_STREQ(resetReasonToString(ESP_RST_TASK_WDT), "task_watchdog");
+    EXPECT_STREQ(resetReasonToString(ESP_RST_BROWNOUT), "brownout");
+    EXPECT_STREQ(resetReasonToString(ESP_RST_UNKNOWN), "unknown");
+    EXPECT_STREQ(resetReasonToString(static_cast<esp_reset_reason_t>(99)), "unknown");  // newer IDF values
 }

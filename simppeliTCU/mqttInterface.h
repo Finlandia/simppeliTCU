@@ -22,6 +22,10 @@ void mqttUpdateLock(bool locked);
 void mqttUpdateGPS(double latitude, double longitude);
 void mqttPublishStatus(const char* msg);
 
+// Publishes WiFi RSSI, free heap, last reset reason, CAN bus state and CAN error counters.
+// Called automatically on connect and every DIAGNOSTICS_INTERVAL_MS.
+void mqttPublishDiagnostics();
+
 // Optional callbacks implemented in simppeliTCU.ino
 extern void handleMqttHvacOn(float setpoint);
 extern void handleMqttHvacOff();

@@ -28,6 +28,7 @@ public:
     bool setSleep(bool) { return true; }
     wl_status_t status() { return WL_CONNECTED; }
     IPAddress localIP() { return IPAddress(127, 0, 0, 1); }
+    int8_t RSSI() { return -50; }  // fixed "good" signal: the host has no WiFi radio
     IPAddress softAPIP() { return IPAddress(127, 0, 0, 1); }
     // Fixed, locally-administered fake MAC (matches ESP32 WiFi.macAddress(uint8_t*) signature).
     uint8_t* macAddress(uint8_t* mac) {

@@ -30,8 +30,23 @@ struct OvmsMetrics {
   // Server connection status ("yes"/"no"), also used as MQTT Last Will and as
   // the Home Assistant availability topic.
   const char* connected = "metric/s/v3/connected";
+  // Module diagnostics. wifiRssi and freeHeap use the OVMS metric names
+  // (m.net.wifi.sq, m.freeram); the "tcu" ones are simppeliTCU specific.
+  const char* wifiRssi = "metric/m/net/wifi/sq";
+  const char* freeHeap = "metric/m/freeram";
+  const char* resetReason = "metric/m/tcu/resetreason";
+  const char* canState = "metric/m/tcu/canstate";
+  const char* canTxErrors = "metric/m/tcu/can/txerrors";
+  const char* canRxErrors = "metric/m/tcu/can/rxerrors";
+  const char* canRxMissed = "metric/m/tcu/can/rxmissed";
 };
 extern const OvmsMetrics ovmsMetrics;
+
+// Diagnostics are published on connect and then every DIAGNOSTICS_INTERVAL_MS.
+// Home Assistant marks them unavailable after DIAGNOSTICS_EXPIRE_AFTER_S without an
+// update (3 intervals, so one or two lost publishes do not cause false alarms).
+#define DIAGNOSTICS_INTERVAL_MS (5UL * 60UL * 1000UL)
+#define DIAGNOSTICS_EXPIRE_AFTER_S "900"
 
 // Represents a single key-value pair for HASS discovery JSON
 struct HassMqttProperty {

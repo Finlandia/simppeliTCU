@@ -23,6 +23,20 @@ TEST_F(HassDiscovery, MetricTopicsAreOvmsCompatible) {
     EXPECT_EQ(strncmp(ovmsMetrics.latitude, "metric/", 7), 0);
 }
 
+TEST_F(HassDiscovery, DiagnosticTopicsUseOvmsModuleMetrics) {
+    EXPECT_STREQ(ovmsMetrics.wifiRssi, "metric/m/net/wifi/sq");
+    EXPECT_STREQ(ovmsMetrics.freeHeap, "metric/m/freeram");
+    EXPECT_EQ(strncmp(ovmsMetrics.resetReason, "metric/m/", 9), 0);
+    EXPECT_EQ(strncmp(ovmsMetrics.canState, "metric/m/", 9), 0);
+    EXPECT_EQ(strncmp(ovmsMetrics.canTxErrors, "metric/m/", 9), 0);
+    EXPECT_EQ(strncmp(ovmsMetrics.canRxErrors, "metric/m/", 9), 0);
+    EXPECT_EQ(strncmp(ovmsMetrics.canRxMissed, "metric/m/", 9), 0);
+}
+
+TEST_F(HassDiscovery, DiagnosticsExpireAfterSeveralPublishIntervals) {
+    EXPECT_GE(atol(DIAGNOSTICS_EXPIRE_AFTER_S) * 1000L, 2L * (long)DIAGNOSTICS_INTERVAL_MS);
+}
+
 TEST_F(HassDiscovery, SkipsPublishingWhenDisconnected) {
     PubSubClient client;
     StringBuffer<128> prefix;

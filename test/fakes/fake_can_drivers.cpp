@@ -44,6 +44,16 @@ esp_err_t twai_start() {
     return fakeTwai.startResult;
 }
 
+esp_err_t twai_get_status_info(twai_status_info_t* status_info) {
+    if (fakeTwai.statusResult != ESP_OK) return fakeTwai.statusResult;
+    *status_info = twai_status_info_t{};
+    status_info->state = fakeTwai.state;
+    status_info->tx_error_counter = fakeTwai.txErrorCounter;
+    status_info->rx_error_counter = fakeTwai.rxErrorCounter;
+    status_info->rx_missed_count = fakeTwai.rxMissedCount;
+    return ESP_OK;
+}
+
 esp_err_t twai_transmit(const twai_message_t* message, TickType_t ticks) {
     fakeTwai.transmitted.push_back(*message);
     fakeTwai.transmitTicks.push_back(ticks);

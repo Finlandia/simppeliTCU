@@ -23,6 +23,11 @@ struct FakeTwai {
     esp_err_t installResult = ESP_OK;
     esp_err_t startResult = ESP_OK;
     esp_err_t transmitResult = ESP_OK;
+    esp_err_t statusResult = ESP_OK;
+    twai_state_t state = TWAI_STATE_RUNNING;
+    uint32_t txErrorCounter = 0;
+    uint32_t rxErrorCounter = 0;
+    uint32_t rxMissedCount = 0;
 
     // Recorded calls
     bool installCalled = false;

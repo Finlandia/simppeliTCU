@@ -66,5 +66,6 @@ extern HardwareSerial Serial;
 class EspClass {
 public:
     [[noreturn]] void restart();
+    uint32_t getFreeHeap() { return 200000; }  // fixed plausible value; the host has no heap limit
 };
 extern EspClass ESP;

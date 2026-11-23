@@ -7,6 +7,7 @@
 typedef int esp_err_t;
 #define ESP_OK 0
 #define ESP_FAIL -1
+#define ESP_ERR_INVALID_STATE 0x103
 #define ESP_ERR_TIMEOUT 0x107
 
 typedef int gpio_num_t;
@@ -40,6 +41,27 @@ typedef struct {
     uint32_t rx_queue_len;
 } twai_general_config_t;
 
+typedef enum {
+    TWAI_STATE_STOPPED,
+    TWAI_STATE_RUNNING,
+    TWAI_STATE_BUS_OFF,
+    TWAI_STATE_RECOVERING,
+} twai_state_t;
+
+// Same fields as ESP-IDF's twai_status_info_t
+typedef struct {
+    twai_state_t state;
+    uint32_t msgs_to_tx;
+    uint32_t msgs_to_rx;
+    uint32_t tx_error_counter;
+    uint32_t rx_error_counter;
+    uint32_t tx_failed_count;
+    uint32_t rx_missed_count;
+    uint32_t rx_overrun_count;
+    uint32_t arb_lost_count;
+    uint32_t bus_error_count;
+} twai_status_info_t;
+
 typedef struct {
     uint32_t bitrate;
 } twai_timing_config_t;
@@ -59,3 +81,4 @@ esp_err_t twai_driver_install(const twai_general_config_t* g, const twai_timing_
 esp_err_t twai_start();
 esp_err_t twai_transmit(const twai_message_t* message, TickType_t ticks);
 esp_err_t twai_receive(twai_message_t* message, TickType_t ticks);
+esp_err_t twai_get_status_info(twai_status_info_t* status_info);

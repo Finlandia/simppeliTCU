@@ -141,6 +141,12 @@ esp_err_t twai_start() {
     return (backend == Backend::SOCKETCAN && canFd < 0) ? ESP_FAIL : ESP_OK;
 }
 
+esp_err_t twai_get_status_info(twai_status_info_t* status_info) {
+    *status_info = twai_status_info_t{};
+    status_info->state = started ? TWAI_STATE_RUNNING : TWAI_STATE_STOPPED;
+    return ESP_OK;
+}
+
 esp_err_t twai_transmit(const twai_message_t* message, TickType_t) {
     if (!started) return ESP_FAIL;
     if (backend != Backend::SOCKETCAN) return ESP_OK;  // no bus: pretend the frame went out

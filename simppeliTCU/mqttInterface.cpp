@@ -6,11 +6,14 @@
 #include "configuration.h"
 #include "stringBuffer.h"
 #include "hassDiscovery.h"
+#include "canInterface.h"
+#include <esp_system.h>
 
 WiFiClient espClient; // For non-TLS
 WiFiClientSecure espClientSecure; // For TLS
 PubSubClient mqttClient;
 unsigned long lastMqttReconnectAttempt = 0;
+static unsigned long lastDiagnosticsPublish = 0;
 
 struct OvmsCommands {
   const char* hvacOn = "climatecontrol on";
@@ -181,6 +184,9 @@ boolean reconnectMQTT() {
     if (lastDoorsStateSet) { doorsDirty = true; mqttUpdateDoors(lastDoorFL, lastDoorFR, lastDoorRL, lastDoorRR, lastDoorTrunk); }
     if (lastLockStateSet) { lockDirty = true; mqttUpdateLock(lastLockState); }
     if (lastGpsStateSet) { gpsDirty = true; mqttUpdateGPS(lastLatitude, lastLongitude); }
+
+    mqttPublishDiagnostics();
+    lastDiagnosticsPublish = millis();
     
     return true;
   }
@@ -217,6 +223,10 @@ void manageMQTT() {
       }
     } else {
       mqttClient.loop();
+      if (millis() - lastDiagnosticsPublish >= DIAGNOSTICS_INTERVAL_MS) {
+        lastDiagnosticsPublish = millis();
+        mqttPublishDiagnostics();
+      }
     }
   }
 
@@ -330,6 +340,39 @@ void mqttUpdateVentilationMode(VentilationMode mode) {
   if (lastVentilationMode == mode && !ventilationModeDirty) return;
   lastVentilationMode = mode;
   ventilationModeDirty = !mqttPublishMetricStr(ovmsMetrics.ventilationMode, ventilationModeToString(mode));
+}
+
+const char* resetReasonToString(esp_reset_reason_t reason) {
+  switch (reason) {
+    case ESP_RST_POWERON:   return "power_on";
+    case ESP_RST_EXT:       return "external_pin";
+    case ESP_RST_SW:        return "software";
+    case ESP_RST_PANIC:     return "panic";
+    case ESP_RST_INT_WDT:   return "interrupt_watchdog";
+    case ESP_RST_TASK_WDT:  return "task_watchdog";
+    case ESP_RST_WDT:       return "other_watchdog";
+    case ESP_RST_DEEPSLEEP: return "deep_sleep";
+    case ESP_RST_BROWNOUT:  return "brownout";
+    case ESP_RST_SDIO:      return "sdio";
+    case ESP_RST_UNKNOWN:
+    default:                return "unknown";
+  }
+}
+
+// Board health metrics. Published unconditionally (not only on change) so the periodic
+// publish doubles as a heartbeat for Home Assistant's expire_after.
+void mqttPublishDiagnostics() {
+  if (!mqttClient.connected()) return;
+  mqttPublishMetric(ovmsMetrics.wifiRssi, WiFi.RSSI(), "%.0f");
+  mqttPublishMetric(ovmsMetrics.freeHeap, ESP.getFreeHeap(), "%.0f");
+  mqttPublishMetricStr(ovmsMetrics.resetReason, resetReasonToString(esp_reset_reason()));
+  mqttPublishMetricStr(ovmsMetrics.canState, getCanBusState());
+  CanBusErrorCounters can;
+  if (getCanBusErrorCounters(can)) {  // nothing to report if the CAN driver is not installed
+    mqttPublishMetric(ovmsMetrics.canTxErrors, can.txErrors, "%.0f");
+    mqttPublishMetric(ovmsMetrics.canRxErrors, can.rxErrors, "%.0f");
+    mqttPublishMetric(ovmsMetrics.canRxMissed, can.rxMissed, "%.0f");
+  }
 }
 
 void mqttUpdateSOC(float soc) {

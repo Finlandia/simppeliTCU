@@ -208,6 +208,81 @@ static const HassMqttProperty refreshProps[] = {
   {"payload_press", "server v3 update modified"}
 };
 
+// --- Diagnostics (shown under "Diagnostic" on the HA device page) ---
+
+// Sensor: WiFi signal strength
+static const HassMqttProperty wifiRssiProps[] = {
+  {"name", "WiFi Signal"},
+  {"device_class", "signal_strength"},
+  {"unit_of_measurement", "dBm"},
+  {"state_class", "measurement"},
+  {"entity_category", "diagnostic"},
+  {"expire_after", DIAGNOSTICS_EXPIRE_AFTER_S},
+  {"state_topic", ovmsMetrics.wifiRssi}
+};
+
+// Sensor: Free heap memory
+static const HassMqttProperty freeHeapProps[] = {
+  {"name", "Free Heap"},
+  {"device_class", "data_size"},
+  {"unit_of_measurement", "B"},
+  {"suggested_unit_of_measurement", "kB"},
+  {"state_class", "measurement"},
+  {"icon", "mdi:memory"},
+  {"entity_category", "diagnostic"},
+  {"expire_after", DIAGNOSTICS_EXPIRE_AFTER_S},
+  {"state_topic", ovmsMetrics.freeHeap}
+};
+
+// Sensor: Reason for the last reset (power-on, brownout, watchdog, panic, ...)
+static const HassMqttProperty resetReasonProps[] = {
+  {"name", "Last Reset Reason"},
+  {"icon", "mdi:restart-alert"},
+  {"entity_category", "diagnostic"},
+  {"expire_after", DIAGNOSTICS_EXPIRE_AFTER_S},
+  {"state_topic", ovmsMetrics.resetReason}
+};
+
+// Sensor: Primary CAN controller state
+static const HassMqttProperty canStateProps[] = {
+  {"name", "CAN Bus State"},
+  {"icon", "mdi:car-connected"},
+  {"entity_category", "diagnostic"},
+  {"expire_after", DIAGNOSTICS_EXPIRE_AFTER_S},
+  {"state_topic", ovmsMetrics.canState}
+};
+
+// Sensor: CAN transmit error counter (TEC). Non-zero values point at wiring,
+// termination or bitrate problems; 256 means the controller went bus-off.
+static const HassMqttProperty canTxErrorsProps[] = {
+  {"name", "CAN TX Error Counter"},
+  {"state_class", "measurement"},
+  {"icon", "mdi:alert-circle-outline"},
+  {"entity_category", "diagnostic"},
+  {"expire_after", DIAGNOSTICS_EXPIRE_AFTER_S},
+  {"state_topic", ovmsMetrics.canTxErrors}
+};
+
+// Sensor: CAN receive error counter (REC)
+static const HassMqttProperty canRxErrorsProps[] = {
+  {"name", "CAN RX Error Counter"},
+  {"state_class", "measurement"},
+  {"icon", "mdi:alert-circle-outline"},
+  {"entity_category", "diagnostic"},
+  {"expire_after", DIAGNOSTICS_EXPIRE_AFTER_S},
+  {"state_topic", ovmsMetrics.canRxErrors}
+};
+
+// Sensor: CAN frames dropped because the RX queue was full (cumulative since boot)
+static const HassMqttProperty canRxMissedProps[] = {
+  {"name", "CAN Missed RX Frames"},
+  {"state_class", "total_increasing"},
+  {"icon", "mdi:message-alert-outline"},
+  {"entity_category", "diagnostic"},
+  {"expire_after", DIAGNOSTICS_EXPIRE_AFTER_S},
+  {"state_topic", ovmsMetrics.canRxMissed}
+};
+
 // The Central Metric Registry
 static const HassMqttMetric hassMetrics[] = {
   // Sensors
@@ -230,6 +305,15 @@ static const HassMqttMetric hassMetrics[] = {
   // Switches
   {"switch", "hvac_switch", hvacSwProps, sizeof(hvacSwProps)/sizeof(HassMqttProperty), false},
   {"switch", "lock_switch", lockSwProps, sizeof(lockSwProps)/sizeof(HassMqttProperty), false},
+
+  // Diagnostics
+  {"sensor", "wifi_rssi", wifiRssiProps, sizeof(wifiRssiProps)/sizeof(HassMqttProperty), false},
+  {"sensor", "free_heap", freeHeapProps, sizeof(freeHeapProps)/sizeof(HassMqttProperty), false},
+  {"sensor", "reset_reason", resetReasonProps, sizeof(resetReasonProps)/sizeof(HassMqttProperty), false},
+  {"sensor", "can_state", canStateProps, sizeof(canStateProps)/sizeof(HassMqttProperty), false},
+  {"sensor", "can_tx_errors", canTxErrorsProps, sizeof(canTxErrorsProps)/sizeof(HassMqttProperty), false},
+  {"sensor", "can_rx_errors", canRxErrorsProps, sizeof(canRxErrorsProps)/sizeof(HassMqttProperty), false},
+  {"sensor", "can_rx_missed", canRxMissedProps, sizeof(canRxMissedProps)/sizeof(HassMqttProperty), false},
 
   // Buttons
   {"button", "charge", chargeBtnProps, sizeof(chargeBtnProps)/sizeof(HassMqttProperty), false},
