@@ -31,6 +31,7 @@ extern float lastHVACSetpoint_value;
 extern float lastFanSpeed_value;
 extern bool lastHeating_value;
 extern bool lastCooling_value;
+extern VentilationMode lastVentilationMode_value;
 
 // Accessor functions for the test
 namespace {
@@ -54,12 +55,22 @@ namespace {
         nagScreenPopupCount = 0;
         gpsDataUpdateCount = 0;
         lastGpsData_value = {};
+        lastVentilationMode_value = VentilationMode::UNKNOWN;
         sentCANMessages.clear();
     }
 }
 
+// Every test starts from power-on state, so tests are independent of execution order
+class CanLeafZE1Parsing : public ::testing::Test {
+protected:
+    void SetUp() override {
+        resetCanLeafZE1State();
+        resetMocks();
+    }
+};
+
 // Test SOC parsing
-TEST(CanLeafZE1Parsing, SOC_Parsing) {
+TEST_F(CanLeafZE1Parsing, SOC_Parsing) {
     resetMocks();
     
     uint8_t socData[] = {0x21, 0x98};
@@ -78,7 +89,7 @@ TEST(CanLeafZE1Parsing, SOC_Parsing) {
 }
 
 // Test cabin temperature parsing
-TEST(CanLeafZE1Parsing, CabinTemp_Parsing) {
+TEST_F(CanLeafZE1Parsing, CabinTemp_Parsing) {
     resetMocks();
     
     uint8_t tempData1[] = {0x78};
@@ -102,7 +113,7 @@ TEST(CanLeafZE1Parsing, CabinTemp_Parsing) {
 }
 
 // Test car awake parsing
-TEST(CanLeafZE1Parsing, CarAwake_Parsing) {
+TEST_F(CanLeafZE1Parsing, CarAwake_Parsing) {
     resetMocks();
     EXPECT_FALSE(carIsAwake);
     
@@ -111,7 +122,7 @@ TEST(CanLeafZE1Parsing, CarAwake_Parsing) {
 }
 
 // Test charger status parsing
-TEST(CanLeafZE1Parsing, ChargerStatus_Parsing) {
+TEST_F(CanLeafZE1Parsing, ChargerStatus_Parsing) {
     resetMocks();
     uint8_t chargeData1[] = {0x00, 0x00, 0x00, 0x00, 0x40, 0x02};
     handleReceivedMessage(0x390, chargeData1, sizeof(chargeData1));
@@ -150,7 +161,7 @@ TEST(CanLeafZE1Parsing, ChargerStatus_Parsing) {
 }
 
 // Test HVAC status parsing
-TEST(CanLeafZE1Parsing, HVACStatus_Parsing) {
+TEST_F(CanLeafZE1Parsing, HVACStatus_Parsing) {
     resetMocks();
     uint8_t hvacData1[] = {0x00, 0x01};
     handleReceivedMessage(0x54B, hvacData1, sizeof(hvacData1));
@@ -173,7 +184,7 @@ TEST(CanLeafZE1Parsing, HVACStatus_Parsing) {
 }
 
 // Test HVAC Setpoint parsing
-TEST(CanLeafZE1Parsing, HVACSetpoint_Parsing) {
+TEST_F(CanLeafZE1Parsing, HVACSetpoint_Parsing) {
     resetMocks();
     
     // Setpoint is byte 4, divided by 2
@@ -188,7 +199,7 @@ TEST(CanLeafZE1Parsing, HVACSetpoint_Parsing) {
 }
 
 // Test HVAC Fan Speed and Heating/Cooling Mode parsing
-TEST(CanLeafZE1Parsing, HVACAdvancedMetrics_Parsing) {
+TEST_F(CanLeafZE1Parsing, HVACAdvancedMetrics_Parsing) {
     resetMocks();
     
     // Heating ON (bit 0), Fan Speed 7 (bits 5:3 = 111 -> 0x38)
@@ -216,7 +227,7 @@ TEST(CanLeafZE1Parsing, HVACAdvancedMetrics_Parsing) {
 }
 
 // Test Doors and Locks parsing
-TEST(CanLeafZE1Parsing, DoorsAndLocks_Parsing) {
+TEST_F(CanLeafZE1Parsing, DoorsAndLocks_Parsing) {
     resetMocks();
     
     // Everything closed and unlocked
@@ -293,7 +304,7 @@ TEST(CanLeafZE1Parsing, DoorsAndLocks_Parsing) {
 }
 
 // Test that unknown message IDs are ignored
-TEST(CanLeafZE1Parsing, UnknownMessageID) {
+TEST_F(CanLeafZE1Parsing, UnknownMessageID) {
     resetMocks();
     
     uint8_t unknownData[] = {0x01, 0x02, 0x03, 0x04};
@@ -308,7 +319,7 @@ TEST(CanLeafZE1Parsing, UnknownMessageID) {
 }
 
 // Test nag screen popup detection and one-shot per boot cycle
-TEST(CanLeafZE1Parsing, NagScreenPopup_DetectionAndRearm) {
+TEST_F(CanLeafZE1Parsing, NagScreenPopup_DetectionAndRearm) {
     resetMocks();
 
     uint8_t displaySeq40[] = {0x10, 0x2A, 0x40, 0x20, 0x0D, 0x00, 0x00, 0x01};
@@ -357,7 +368,7 @@ TEST(CanLeafZE1Parsing, NagScreenPopup_DetectionAndRearm) {
 }
 
 // Test DISMISS_NAG sequence timing and rolling sequence counter on 0x683
-TEST(CanLeafZE1Parsing, DismissNag_SequenceExecution) {
+TEST_F(CanLeafZE1Parsing, DismissNag_SequenceExecution) {
     resetMocks();
 
     // Simulate cluster boot init (seq 0 -> 1) and ensure 0xE0/0xF0 frames on 0x683 are ignored
@@ -410,7 +421,7 @@ TEST(CanLeafZE1Parsing, DismissNag_SequenceExecution) {
 }
 
 // Test nag screen dismissal deferred while car is in reverse (reverse camera active)
-TEST(CanLeafZE1Parsing, NagScreenPopup_DeferredWhileInReverse) {
+TEST_F(CanLeafZE1Parsing, NagScreenPopup_DeferredWhileInReverse) {
     resetMocks();
 
     uint8_t clusterBoot0[]  = {0x07, 0x00, 0x00, 0x20, 0x00, 0x01, 0x09, 0x00};
@@ -452,7 +463,7 @@ TEST(CanLeafZE1Parsing, NagScreenPopup_DeferredWhileInReverse) {
 }
 
 // Test shifting into reverse while DISMISS_NAG sequence is waiting aborts and re-triggers on exit
-TEST(CanLeafZE1Parsing, NagScreenPopup_ReverseAbortsActiveDismissAndRetriggers) {
+TEST_F(CanLeafZE1Parsing, NagScreenPopup_ReverseAbortsActiveDismissAndRetriggers) {
     resetMocks();
 
     uint8_t clusterBoot0[] = {0x07, 0x00, 0x00, 0x20, 0x00, 0x01, 0x09, 0x00};
@@ -482,7 +493,7 @@ TEST(CanLeafZE1Parsing, NagScreenPopup_ReverseAbortsActiveDismissAndRetriggers) 
 }
 
 // Test AV-CAN 0x62C multi-frame GPS data assembly and bitstream coordinate parsing
-TEST(CanLeafZE1Parsing, AVCanGPS_MultiFrameParsing) {
+TEST_F(CanLeafZE1Parsing, AVCanGPS_MultiFrameParsing) {
     resetMocks();
 
     // Synthetic 0x62C multi-frame GPS message (60° 10' 10.800" N, 24° 57' 8.100" E)
@@ -510,7 +521,7 @@ TEST(CanLeafZE1Parsing, AVCanGPS_MultiFrameParsing) {
 }
 
 // Test AV-CAN 0x62C GPS assembly with interleaved control frames and non-GPS multi-frame messages
-TEST(CanLeafZE1Parsing, AVCanGPS_InterleavedAndNonGpsFrames) {
+TEST_F(CanLeafZE1Parsing, AVCanGPS_InterleavedAndNonGpsFrames) {
     resetMocks();
 
     // Non-GPS multi-frame message on 0x62C (len 0x1F) must be ignored

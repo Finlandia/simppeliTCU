@@ -46,6 +46,8 @@ Within VS Code navigate to extension tab and under 'SimpeliTCU' hit Build.
 
 ## Running Unit Tests
 
+See [test/README.md](../test/README.md) for what the tests cover and their known shortcomings.
+
 ### Prerequisites
 
 - CMake 3.14+

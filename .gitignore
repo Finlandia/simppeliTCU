@@ -1,6 +1,7 @@
 # Build directories
 simppeliTCU/build/
 test/build/
+host/build
 .pio
 
 # IDE specific
@@ -27,3 +28,7 @@ googletest-build/
 # Coverage reports
 coverage.html
 coverage.xml
+
+
+# Host generated config files
+host/simppeliTCU_host_prefs.txt

@@ -173,4 +173,9 @@ void setHVACTargetTemperature(float setpoint);
 void startSequence(CanSequence seq, unsigned long currentTimeMs);
 CanSeqResult manageCANSequence(unsigned long currentTimeMs);
 
+#ifdef SIMPPELITCU_UNIT_TEST
+// Restore all module-internal state to its power-on values. Unit-test builds only.
+void resetCanLeafZE1State();
+#endif
+
 #endif

@@ -37,11 +37,16 @@ target_include_directories(can_leaf_ze1_parsing_tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../simppeliTCU
 )
 
-target_link_libraries(can_leaf_ze1_parsing_tests PRIVATE 
+# Enables test-only hooks in the firmware sources (e.g. resetCanLeafZE1State)
+target_compile_definitions(can_leaf_ze1_parsing_tests PRIVATE SIMPPELITCU_UNIT_TEST)
+
+target_link_libraries(can_leaf_ze1_parsing_tests PRIVATE
     ${GTEST_MAIN_TARGET}
     test_stubs
 )
 
 enable_testing()
 
-add_test(NAME can_leaf_ze1_parsing_tests COMMAND can_leaf_ze1_parsing_tests)
+# Shuffle test order on every run to catch state leaking between tests.
+# A failing run prints its seed; reproduce with --gtest_shuffle --gtest_random_seed=<seed>.
+add_test(NAME can_leaf_ze1_parsing_tests COMMAND can_leaf_ze1_parsing_tests --gtest_shuffle)

@@ -1,0 +1,106 @@
+# Unit tests
+
+Host-side GoogleTest suite for the firmware's CAN logic. Build and run instructions are in
+[docs/compiling.md](../docs/compiling.md#running-unit-tests). On Linux:
+
+```bash
+cmake -S test -B test/build && cmake --build test/build && ctest --test-dir test/build
+```
+
+## What is covered
+
+One executable, `can_leaf_ze1_parsing_tests`, compiles **only** `simppeliTCU/canLeafZE1.cpp`
+against the stubs in `test_canInterface_stubs.cpp`. It has 15 tests and covers about 85% of the
+lines in that file. Covered areas:
+
+- Decoding of SOC (0x55B), cabin temperature (0x54F), car awake (0x601), charger (0x390),
+  HVAC status (0x54B), HVAC setpoint (0x54A) and doors/locks (0x60D)
+- Detecting the nag screen popup (0x628 / 0x62C / 0x683), including how it is deferred while
+  reversing (0x421)
+- Timing and sequence counter of the `DISMISS_NAG` send sequence
+- Reassembling the multi-frame AV-CAN GPS message (0x62C)
+
+## Test isolation
+
+All tests use the `CanLeafZE1Parsing` fixture. Its `SetUp()` calls `resetCanLeafZE1State()`,
+which returns the internal state of `canLeafZE1.cpp` (nag-popup and reverse flags, AV sequence
+counter, GPS reassembly buffer, send-sequence state machine, HVAC setpoint) to power-on values,
+and `resetMocks()`, which clears the stub globals. Every test therefore starts from the same state.
+
+`ctest` runs the suite with `--gtest_shuffle`, so a test that leaks state into another fails
+in a random order. A failing run prints its seed; reproduce it with:
+
+```bash
+./can_leaf_ze1_parsing_tests --gtest_shuffle --gtest_random_seed=<seed>
+```
+
+`resetCanLeafZE1State()` only exists when `SIMPPELITCU_UNIT_TEST` is defined, which
+`test/CMakeLists.txt` does for the test executable; firmware and host builds don't contain it.
+When you add internal state to `canLeafZE1.cpp`, also reset it in `resetCanLeafZE1State()`.
+
+## Known shortcomings
+
+### 1. Most of the firmware is not tested at all
+
+These sources are not compiled into any test, so they get no tests and no coverage:
+
+| File | Untested responsibility |
+| --- | --- |
+| `canInterface.cpp` | Real `handle*` callbacks (state → MQTT publish), CAN logging, `sendCAN` |
+| `mqttInterface.cpp` | Topic building, command parsing, publish logic |
+| `hassDiscovery.cpp` | Home Assistant discovery payloads, availability topics |
+| `configuration.cpp` | Loading and saving preferences, defaults |
+| `cliParser.cpp` | Serial CLI command parsing |
+| `secondCan.cpp` | Second CAN bus forwarding |
+| `stringBuffer.h` | Bounded string helper (overflow and truncation behaviour) |
+
+The `handle*` functions are replaced with stubs that only store the last value they received.
+The tests therefore check *decoding* but not what the firmware *does* with a decoded value.
+
+The Arduino/ESP32 shims in `host/shims/` already let all of these files build on Linux for the
+host application. They could be reused to bring these files under test.
+
+### 2. Gaps inside `canLeafZE1.cpp`
+
+These paths never run (gcov, Debug build):
+
+- **Wake-up phase of the sequence state machine:** `WAKING` / `WAKE_WAIT`, the 0x68C wake-up
+  ping, `WAKE_SUCCESS`, and `WAKE_TIMEOUT` after 130 attempts. Only `DISMISS_NAG`, which skips
+  wake-up, is tested.
+- **All other sequences:** `REFRESH`, `HVAC_ON`, `HVAC_OFF`, `CHARGE_ON`, `LOCK_DOORS` and
+  `UNLOCK_DOORS` (the frames and timing actually sent to the car).
+- **`setHVACTargetTemperature()` and `hvacPayloadModifier`:** the setpoint byte injected into
+  `HVAC_ON` frames is never checked.
+- **Multi-repeat steps:** the step-interval branch (`repeats > 1`) never runs.
+- **`decodeVentilationMode()`:** no test asserts a ventilation mode.
+- **Signed field extraction:** the sign-extension path in `extractScaledValue`
+  (`canInterface.h`).
+- **Error paths:** an unknown charger status, `parse_av_can_gps(nullptr, …)`, a GPS
+  consecutive frame that is too short, and `startSequence()` called while a sequence is active
+  or with `CanSequence::NONE`.
+- **Length checking:** no test confirms that frames shorter than the expected DLC are dropped
+  by `handleReceivedMessage`.
+- **`millis()` wraparound** in `manageCANSequence`'s time comparison.
+- **GPS hemispheres:** only north/east coordinates are tested. Southern and western positions
+  are untested, and the decoder has no hemisphere handling.
+
+### 3. Test infrastructure issues
+
+- `struct SentCANMessage` is defined twice, once in each test source file. The two definitions
+  must stay identical by hand, or the program violates the One Definition Rule. Move it into a
+  shared header.
+- Most tests run several unrelated cases one after another. When one case fails, later
+  cases can fail too and hide the real cause. Parameterised tests (`TEST_P`) would keep the
+  cases independent.
+- `CMakeLists.txt` lists header files as sources of the test executable (harmless, but
+  noise).
+
+### 4. CI and reporting
+
+- The coverage report in CI (gcovr → Codecov) only contains files that the tests compile, which
+  is just `canLeafZE1.cpp`. The ~85% figure therefore looks much better than the real
+  coverage of the firmware, because the untested files are left out instead of counted as 0%.
+- CI has no minimum coverage threshold.
+- The host application ships with `host/sample-can.log`, but CI never replays it, so nothing
+  tests the complete path from CAN frame to MQTT message.
+- `docs/compiling.md` only shows commands for MinGW on Windows.

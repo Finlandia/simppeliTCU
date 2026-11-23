@@ -485,3 +485,23 @@ CanSeqResult manageCANSequence(unsigned long currentTimeMs) {
     }
     return CanSeqResult::PROCESSING;
 }
+
+#ifdef SIMPPELITCU_UNIT_TEST
+void resetCanLeafZE1State() {
+    activeSequence = CanSequence::NONE;
+    currentPhase = SeqPhase::IDLE;
+    wakeAttempts = 0;
+    stepIndex = 0;
+    repeatCount = 0;
+    nextCANEventTime = 0;
+    internal_hvac_setpoint_byte = 0;
+
+    internal_av_seq_nibble = AV_SEQ_MIN;
+    nag_popup_armed = false;
+    nag_popup_pending = false;
+    car_in_reverse = false;
+
+    memset(av_gps_payload, 0, sizeof(av_gps_payload));
+    av_gps_expected_cf = 0;
+}
+#endif
