@@ -1,10 +1,12 @@
 # Build directories
 simppeliTCU/build/
 test/build/
+.pio
 
 # IDE specific
 .idea/
 .vs/
+.vscode/
 
 # Compiled objects
 *.o
