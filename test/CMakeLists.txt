@@ -102,7 +102,7 @@ add_library(host_shims STATIC
     ${SHIM_DIR}/Preferences.cpp
     ${SHIM_DIR}/WebServer.cpp
     ${SHIM_DIR}/WiFiClient.cpp
-    ${SHIM_DIR}/twai_host.cpp
+    ${SHIM_DIR}/can_host.cpp
     ${pubsubclient_SOURCE_DIR}/src/PubSubClient.cpp
 )
 # Shims come first so <WiFi.h> etc. resolve to the host versions

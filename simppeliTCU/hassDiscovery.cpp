@@ -47,7 +47,8 @@ void publishHassConfigForMetric(PubSubClient& mqttClient, const StringBuffer<128
     payload.append("\":\"");
 
     // Prepend the base OVMS topic path for state and command topics
-    if (strcmp(prop.key, "state_topic") == 0 || strcmp(prop.key, "command_topic") == 0) {
+    if (strcmp(prop.key, "state_topic") == 0 || strcmp(prop.key, "command_topic") == 0 ||
+        strcmp(prop.key, "json_attributes_topic") == 0) {
       payload.append(mqttPrefix.c_str());
     }
     payload.append(prop.value);
@@ -137,6 +138,16 @@ static const HassMqttProperty longitudeProps[] = {
   {"name", "Longitude"},
   {"unit_of_measurement", "°"},
   {"state_topic", ovmsMetrics.longitude}
+};
+
+// Device Tracker: Location (shown on the Home Assistant map). No state_topic:
+// HA derives the state (home/not_home/zone) from the latitude/longitude
+// attributes in the JSON attributes topic.
+static const HassMqttProperty locationProps[] = {
+  {"name", "Location"},
+  {"source_type", "gps"},
+  {"icon", "mdi:car-electric"},
+  {"json_attributes_topic", ovmsMetrics.location}
 };
 
 // Binary Sensor: Lock Status
@@ -294,6 +305,9 @@ static const HassMqttMetric hassMetrics[] = {
   {"sensor", "ventilation_mode", ventilationModeProps, sizeof(ventilationModeProps)/sizeof(HassMqttProperty), false},
   {"sensor", "latitude", latitudeProps, sizeof(latitudeProps)/sizeof(HassMqttProperty), true},
   {"sensor", "longitude", longitudeProps, sizeof(longitudeProps)/sizeof(HassMqttProperty), true},
+
+  // Device Trackers
+  {"device_tracker", "location", locationProps, sizeof(locationProps)/sizeof(HassMqttProperty), true},
 
   // Binary Sensors
   {"binary_sensor", "charging", chargeProps, sizeof(chargeProps)/sizeof(HassMqttProperty), false},

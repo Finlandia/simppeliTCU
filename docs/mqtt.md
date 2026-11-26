@@ -114,6 +114,7 @@ Where:
 | `ovms/<user>/<vehicle>/metric/v/e/locked` | Yes | Vehicle locked: `yes` or `no` |
 | `ovms/<user>/<vehicle>/metric/v/p/latitude` | Yes | Current latitude in decimal degrees (e.g., `60.205212`). Only published when `tracking` is enabled (disabled by default) |
 | `ovms/<user>/<vehicle>/metric/v/p/longitude` | Yes | Current longitude in decimal degrees (e.g., `24.655841`). Only published when `tracking` is enabled (disabled by default) |
+| `ovms/<user>/<vehicle>/metric/v/p/location` | Yes | Latitude and longitude as JSON (e.g., `{"latitude":60.205212,"longitude":24.655841}`). Used by the Home Assistant `device_tracker` entity. Only published when `tracking` is enabled (disabled by default) |
 | `ovms/<user>/<vehicle>/metric/s/v3/connected` | Yes | Connection status (LWT): `yes` or `no` |
 | `ovms/<user>/<vehicle>/metric/m/net/wifi/sq` | Yes | WiFi signal strength (RSSI) in dBm (e.g., `-67`). Diagnostic, see note below |
 | `ovms/<user>/<vehicle>/metric/m/freeram` | Yes | Free heap memory in bytes. Diagnostic |
@@ -126,7 +127,7 @@ Where:
 
 > **Note:** Diagnostic metrics are published when the MQTT connection is established and then every 5 minutes, whether or not they changed. In Home Assistant they appear under **Diagnostic** on the device page and become unavailable if no update arrives for 15 minutes, which also serves as a heartbeat for the board.
 
-> **Note:** Location tracking (the `latitude`/`longitude` metrics above, the web UI location display, and the Home Assistant `latitude`/`longitude` discovery entities) is disabled by default and can be turned on with `set tracking true` in the serial CLI. When disabled, no location values are published and the location discovery entities are not announced.
+> **Note:** Location tracking (the `latitude`/`longitude` metrics above, the web UI location display, and the Home Assistant `latitude`/`longitude`/`location` discovery entities) is disabled by default and can be turned on with `set tracking true` in the serial CLI. When disabled, no location values are published and the location discovery entities are not announced.
 
 ### Subscribed Topics (simppeliTCU ← Broker)
 

@@ -27,6 +27,9 @@ struct OvmsMetrics {
   const char* ventilationMode = "metric/v/e/cabinvent";
   const char* latitude = "metric/v/p/latitude";
   const char* longitude = "metric/v/p/longitude";
+  // Combined {"latitude":..,"longitude":..} JSON, used as the Home Assistant
+  // device_tracker attributes topic (HA needs both coordinates in one message).
+  const char* location = "metric/v/p/location";
   // Server connection status ("yes"/"no"), also used as MQTT Last Will and as
   // the Home Assistant availability topic.
   const char* connected = "metric/s/v3/connected";

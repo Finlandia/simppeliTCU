@@ -9,5 +9,8 @@ void hostPreferencesSetPath(const char* path);
 // Creates the preferences file with host-friendly defaults if it does not exist.
 void hostSeedPreferences();
 
-bool hostCanUseSocketCan(const char* iface);
+// bus 0 = CAN (TWAI, EV-CAN), bus 1 = second CAN (emulated MCP2515, AV-CAN)
+bool hostCanUseSocketCan(int bus, const char* iface);
+// Replay frames logged on this interface name go to the second CAN (default "vcan1")
+void hostCanSetReplayCan2Iface(const char* iface);
 bool hostCanUseReplay(const char* path, bool loop);

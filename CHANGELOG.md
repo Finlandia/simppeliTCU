@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Home Assistant diagnostics**:
   - New diagnostic entities: WiFi signal (RSSI), free heap, last reset reason, CAN bus state and CAN error counters (TX/RX error counters, missed RX frames). Published on MQTT (`metric/m/net/wifi/sq`, `metric/m/freeram`, `metric/m/tcu/resetreason`, `metric/m/tcu/canstate`, `metric/m/tcu/can/txerrors`, `metric/m/tcu/can/rxerrors`, `metric/m/tcu/can/rxmissed`) on connect and every 5 minutes; Home Assistant marks them unavailable after 15 minutes without an update.
   - The Home Assistant device page has a **Visit** link (`configuration_url`) to the simppeliTCU web UI.
+- **Home Assistant device tracker**:
+  - New `device_tracker` discovery entity (`Location`) so the car shows up on the Home Assistant map. Coordinates are published as JSON on `metric/v/p/location`. Only announced and published when `tracking` is enabled.
 
 ## [v0.3.0] - 2026-11-16
 

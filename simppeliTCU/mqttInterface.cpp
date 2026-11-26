@@ -445,6 +445,9 @@ void mqttUpdateGPS(double latitude, double longitude) {
   bool success = true;
   success &= mqttPublishMetric(ovmsMetrics.latitude, latitude, "%.6f");
   success &= mqttPublishMetric(ovmsMetrics.longitude, longitude, "%.6f");
+  StringBuffer<64> location;
+  location.format("{\"latitude\":%.6f,\"longitude\":%.6f}", latitude, longitude);
+  success &= mqttPublishMetricStr(ovmsMetrics.location, location.c_str());
   gpsDirty = !success;
 }
 

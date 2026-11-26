@@ -18,8 +18,10 @@ static void usage(const char* prog) {
             "  --port <n>         HTTP port for the web UI (default 8080)\n"
             "  --bind <addr>      Address to listen on (default 127.0.0.1, use 0.0.0.0 for LAN)\n"
             "  --prefs <file>     Settings file replacing NVS (default ./simppeliTCU_host_prefs.txt)\n"
-            "  --can <iface>      Use a Linux SocketCAN interface, e.g. vcan0 or can0\n"
+            "  --can <iface>      SocketCAN interface for the CAN bus (EV-CAN), e.g. vcan0 or can0\n"
+            "  --can2 <iface>     SocketCAN interface for the second CAN bus (AV-CAN), e.g. vcan1\n"
             "  --replay <file>    Replay received CAN frames from a `candump -l` log\n"
+            "  --replay-can2 <i>  Log interface whose frames go to the second CAN (default vcan1)\n"
             "  --loop             Repeat the replay log forever\n"
             "\n"
             "The firmware's serial CLI reads from stdin, e.g. type: set mqtt_server localhost\n",
@@ -34,6 +36,7 @@ int main(int argc, char** argv) {
     const char* bind = "127.0.0.1";
     int port = 8080;
     const char* canIface = nullptr;
+    const char* can2Iface = nullptr;
     const char* replayFile = nullptr;
     bool replayLoop = false;
 
@@ -49,14 +52,16 @@ int main(int argc, char** argv) {
         else if (!strcmp(argv[i], "--bind")) bind = next("--bind");
         else if (!strcmp(argv[i], "--prefs")) hostPreferencesSetPath(next("--prefs"));
         else if (!strcmp(argv[i], "--can")) canIface = next("--can");
+        else if (!strcmp(argv[i], "--can2")) can2Iface = next("--can2");
         else if (!strcmp(argv[i], "--replay")) replayFile = next("--replay");
+        else if (!strcmp(argv[i], "--replay-can2")) hostCanSetReplayCan2Iface(next("--replay-can2"));
         else if (!strcmp(argv[i], "--loop")) replayLoop = true;
         else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) { usage(argv[0]); return 0; }
         else { usage(argv[0]); return 2; }
     }
 
-    if (canIface && replayFile) {
-        fprintf(stderr, "Use either --can or --replay, not both\n");
+    if ((canIface || can2Iface) && replayFile) {
+        fprintf(stderr, "Use either --can/--can2 or --replay, not both\n");
         return 2;
     }
     if (port <= 0 || port > 65535) {
@@ -65,7 +70,8 @@ int main(int argc, char** argv) {
     }
 
     hostWebServerConfigure(bind, port);
-    if (canIface) hostCanUseSocketCan(canIface);
+    if (canIface) hostCanUseSocketCan(0, canIface);
+    if (can2Iface) hostCanUseSocketCan(1, can2Iface);
     if (replayFile && !hostCanUseReplay(replayFile, replayLoop)) return 1;
     hostSeedPreferences();
 

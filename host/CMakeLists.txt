@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 3.14)
 project(simppeliTCU_host CXX)
 
 # Builds the firmware as a Linux program (simppeliTCU_host): the web UI is served on
-# localhost:8080, MQTT uses the PC's network, and CAN goes to SocketCAN or a log replay.
+# localhost:8080, MQTT uses the PC's network, and both CAN buses (TWAI and the MCP2515
+# second CAN) go to SocketCAN or a log replay.
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -60,7 +61,7 @@ add_executable(simppeliTCU_host
     ${SHIM_DIR}/Preferences.cpp
     ${SHIM_DIR}/WebServer.cpp
     ${SHIM_DIR}/WiFiClient.cpp
-    ${SHIM_DIR}/twai_host.cpp
+    ${SHIM_DIR}/can_host.cpp
 
     ${PUBSUBCLIENT_DIR}/src/PubSubClient.cpp
 )
@@ -74,7 +75,7 @@ target_include_directories(simppeliTCU_host PRIVATE
 
 target_compile_definitions(simppeliTCU_host PRIVATE
     ESP32                # PubSubClient: use std::function callbacks like on the device
-    USE_SECOND_CAN=0     # MCP2515 is not emulated; all CAN traffic goes through TWAI
+    USE_SECOND_CAN=1     # MCP2515 (AV-CAN) is emulated by shims/can_host.cpp
     GIT_HASH_RAW=${GIT_HASH_RAW}
 )
 
